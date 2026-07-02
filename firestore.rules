@@ -1,0 +1,116 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Catch-all Default Deny Gate
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- HELPER FUNCTIONS ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && (request.auth.token.email_verified == true || request.auth.token.firebase.sign_in_provider == 'google.com');
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'eduardovgdt19@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- SCHEMAS VALIDATION ---
+    function isValidProduct(p) {
+      return p.id is string && p.id.size() <= 128
+        && p.name is string && p.name.size() <= 200
+        && p.category is string && p.category.size() <= 100
+        && p.originalPrice is number && p.originalPrice >= 0
+        && p.images is list && p.images.size() <= 20
+        && p.sizes is list && p.sizes.size() <= 50
+        && p.colors is list && p.colors.size() <= 50
+        && p.description is string && p.description.size() <= 5000;
+    }
+
+    function isValidUser(u) {
+      return u.name is string && u.name.size() <= 200
+        && u.email is string && u.email.size() <= 320
+        && u.favorites is list && u.favorites.size() <= 1000;
+    }
+
+    // A group has an ID, name, and an array of productIds
+    function isValidFavoriteGroup(g) {
+      return g.id is string && g.id.size() <= 128
+        && g.name is string && g.name.size() <= 100
+        && g.productIds is list && g.productIds.size() <= 1000;
+    }
+
+    function isValidOrder(o) {
+      return o.id is string && o.id.size() <= 128
+        && o.date is string && o.date.size() <= 50
+        && o.total is number && o.total >= 0
+        && o.status is string && o.status.size() <= 50
+        && o.customerName is string && o.customerName.size() <= 200
+        && o.customerEmail is string && o.customerEmail.size() <= 320
+        && o.method is string && o.method.size() <= 100
+        && o.userId is string && o.userId.size() <= 128
+        && o.items is list && o.items.size() <= 200;
+    }
+
+    // --- COLLECTION RULES ---
+
+    // Products Catalog
+    match /products/{productId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidProduct(incoming());
+      allow delete: if isAdmin();
+    }
+
+    // User Profile
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create, update: if isOwner(userId) && isValidUser(incoming());
+      allow delete: if isAdmin();
+
+      // Subcollection: Favorite Groups
+      match /favoriteGroups/{groupId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create, update: if isOwner(userId) && isValidFavoriteGroup(incoming());
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    // Orders Collection
+    match /orders/{orderId} {
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidOrder(incoming());
+      allow update: if isAdmin() || (
+        isSignedIn() && resource.data.userId == request.auth.uid &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['status']) &&
+        existing().status == 'pending' &&
+        (incoming().status == 'pending' || incoming().status == 'cancelled')
+      );
+      allow delete: if isAdmin();
+    }
+  }
+}

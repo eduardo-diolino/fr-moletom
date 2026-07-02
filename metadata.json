@@ -1,0 +1,6 @@
+{
+  "name": "FR Moletom",
+  "description": "E-commerce premium de moda masculina infantil especializado em moletons, conjuntos e roupas sofisticadas de 2 a 16 anos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

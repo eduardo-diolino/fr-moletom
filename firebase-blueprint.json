@@ -1,0 +1,97 @@
+{
+  "entities": {
+    "userProfile": {
+      "title": "User Profile",
+      "description": "User account information and active favorites",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "favorites": {
+          "type": "array",
+          "description": "List of favorited product IDs"
+        }
+      },
+      "required": ["name", "email", "favorites"]
+    },
+    "favoriteGroup": {
+      "title": "Favorite Group",
+      "description": "A folder/group of favorite items created by the user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "productIds": {
+          "type": "array",
+          "description": "List of product IDs within this folder"
+        }
+      },
+      "required": ["id", "name", "productIds"]
+    },
+    "order": {
+      "title": "Order",
+      "description": "A purchased order containing order items and payment method",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "total": { "type": "number" },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "shipped", "delivered"]
+        },
+        "customerName": { "type": "string" },
+        "customerEmail": { "type": "string" },
+        "method": { "type": "string" },
+        "userId": { "type": "string" },
+        "items": {
+          "type": "array",
+          "description": "Items purchased in this order"
+        }
+      },
+      "required": ["id", "date", "total", "status", "customerName", "customerEmail", "method", "userId", "items"]
+    },
+    "product": {
+      "title": "Product",
+      "description": "E-commerce product details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "originalPrice": { "type": "number" },
+        "promoPrice": { "type": "number" },
+        "images": { "type": "array" },
+        "sizes": { "type": "array" },
+        "colors": { "type": "array" },
+        "description": { "type": "string" },
+        "details": { "type": "array" },
+        "rating": { "type": "number" },
+        "reviewsCount": { "type": "number" },
+        "salesCount": { "type": "number" },
+        "inStock": { "type": "boolean" },
+        "onSale": { "type": "boolean" },
+        "isNew": { "type": "boolean" }
+      },
+      "required": ["id", "name", "category", "originalPrice", "images", "sizes", "colors", "description", "rating", "reviewsCount", "salesCount", "inStock", "onSale", "isNew"]
+    }
+  },
+  "firestore": {
+    "products/{productId}": {
+      "schema": "product",
+      "description": "Collection of available products for sale"
+    },
+    "users/{userId}": {
+      "schema": "userProfile",
+      "description": "User profiles containing name, email, and global favorites"
+    },
+    "users/{userId}/favoriteGroups/{groupId}": {
+      "schema": "favoriteGroup",
+      "description": "Sub-collection of customized favorite folders/groups for each user"
+    },
+    "orders/{orderId}": {
+      "schema": "order",
+      "description": "Purchased orders placed by clients"
+    }
+  }
+}
